@@ -30,8 +30,9 @@ def get_data_fields(url, parameters):
     import requests
     with requests.Session() as s:
         r = s.get(url, params=parameters).json()
+
     x = r.keys()
-    df = pd.DataFrame(x, columns=[''])
+    df = pd.DataFrame(x, columns=['data_fields'])
 
     return df
 
@@ -69,29 +70,7 @@ def get_facet_fields(url, parameters):
     return df
 
 
-def extract_values(obj, key):
-    """Recursively pull values of specified key from nested JSON."""
-    arr = []
-
-    def extract(obj, arr, key):
-        """Return all matching values in an object."""
-        if isinstance(obj, dict):
-            for k, v in obj.items():
-                if isinstance(v, (dict, list)):
-                    extract(v, arr, key)
-                elif k == key:
-                    arr.append(v)
-        elif isinstance(obj, list):
-            for item in obj:
-                extract(item, arr, key)
-        return arr
-
-    results = extract(obj, arr, key)
-    return results
-
-
 def get_pk_params(url, parameters):
-    # url = 'https://api.elsevier.com/pharma/pk/search'
     pk_param_list = []
     with requests.Session() as s:
         r = s.get(url, params=parameters, stream=True).json()['facets']
@@ -159,22 +138,18 @@ def get_drug_aes_faers(url, drug_list, parameters):
     with requests.Session() as s:
         for drug in tqdm.tqdm(drug_list):
             parameters['drugs']=drug
-            # drugLst.append(drug)
             r = s.get(url, params=parameters, stream=True).json()['facets']
-            x = r['effects']['children']
-            print(len(x))
-            # pprint.pprint(x)
-
+            try:
+                x = r['effects']['children']
+            except:
+                continue
             for i in range(len(x)):
-                # print(x[1])
                 ae = x[i]['data'].get('name', None)
-                # leaf = x[i]['data'].get('isLeaf', None)
                 ae_list.append(ae)
                 count = x[i]['data'].get('count', None)
                 count_lst.append(count)
                 drugLst.append(drug)
-                # leaf_list.append(leaf)
-
+         
     df = pd.DataFrame(zip(drugLst, ae_list, count_lst), columns=['drug', 'ae', 'count'])
 
     return df
